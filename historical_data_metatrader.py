@@ -1,9 +1,20 @@
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 import MetaTrader5 as mt5
 
 import pandas as pd
 
 import fire
+
+def get_symbols(filter='BOVESPA\\A VISTA'):
+    symbols = mt5.symbols_get()
+    if filter is not None:
+        symbols = [info.name for info in symbols if ((filter in info.path) and (info.volume >= 1))]
+    print(f'Founded {len(symbols)} symbols.')
+
+    if 'IBOV' not in symbols:
+        symbols.append('IBOV')
+
+    return symbols
 
 class get_data():
     def __init__(self, login=52906749, server='XPMT5-DEMO', password='HMgJnurcC5RcRSE2'):
@@ -29,7 +40,7 @@ class get_data():
 
     def fetch_data(self, start_date=datetime(year=2010, month=1, day=1), end_date=datetime.now(), symbol='PETR4', interval=mt5.TIMEFRAME_M1, loop_step=30):
         step = timedelta(days=loop_step)
-        print(f'\nBuscando intervalo de {start_date} até {end_date}\n')
+        print(f'\nFetching {symbol} in range {start_date} - {end_date}\n')
         while (start_date < end_date):
             print(f'{start_date} - {start_date + step}')  
             rates = self.fetch_data_from_remote(start_date, start_date + step, symbol, interval)
@@ -52,8 +63,10 @@ class get_data():
 
 def main():
     fetcher = get_data()
-    fetcher.fetch_data(interval=mt5.TIMEFRAME_M10)
-    fetcher.save_data()
+
+    for symbol in get_symbols():
+        fetcher.fetch_data(symbol=symbol, interval=mt5.TIMEFRAME_M10)
+        fetcher.save_data(filename=symbol)
     fetcher.shutdown
 
 if __name__=='__main__':
